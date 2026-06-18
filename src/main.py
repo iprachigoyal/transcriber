@@ -17,6 +17,7 @@ import asyncio
 import logging
 import os
 
+from livekit import rtc
 from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli
 
 from .config import Config
@@ -59,6 +60,30 @@ async def entrypoint(ctx: JobContext) -> None:
     )
     pipeline = TranscriptionPipeline(ctx.room, stt, cfg)
     pipeline.start()
+
+    # Operability logging: see who is in the room and what they publish. This
+    # makes it obvious whether the agent is co-located with the speakers and
+    # whether their mic tracks are being seen.
+    log.info(
+        "connected; remote participants now: %s",
+        [(p.identity, str(p.kind)) for p in ctx.room.remote_participants.values()],
+    )
+
+    def _on_participant_connected(p: rtc.RemoteParticipant) -> None:
+        log.info("participant connected identity=%s kind=%s", p.identity, p.kind)
+
+    def _on_track_published(
+        pub: rtc.RemoteTrackPublication, p: rtc.RemoteParticipant
+    ) -> None:
+        log.info(
+            "track published by=%s source=%s kind=%s",
+            p.identity,
+            pub.source,
+            pub.kind,
+        )
+
+    ctx.room.on("participant_connected", _on_participant_connected)
+    ctx.room.on("track_published", _on_track_published)
 
     stop = asyncio.Event()
     warm_task = asyncio.create_task(_keep_warm(stt, stop))

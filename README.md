@@ -113,6 +113,54 @@ python -m src.main connect --room <conversation-id>
 In normal operation you do **not** pick rooms - the Talksy backend dispatches
 the agent by name when a room call starts.
 
+## Local end-to-end testing (no Talksy UI required)
+
+You can prove the whole pipeline locally with three helper scripts in `tests/`
+plus a LiveKit server and the Whisper Space. The Talksy browser is replaced by
+`tests/verify_captions.py`, which listens for the same `transcription_received`
+event the real UI uses.
+
+> **Environment note.** Use Python 3.11+ (`livekit-agents` needs it). If you use
+> a clean venv (e.g. `uv venv`), make sure `setuptools<81` is installed -
+> `webrtcvad` imports `pkg_resources`, which newer setuptools removed. This is
+> already pinned in `requirements.txt`.
+
+Generate a 16 kHz mono sample (macOS, no ffmpeg needed):
+
+```bash
+say -o /tmp/s.aiff "testing one two three, this is a live caption test"
+afconvert /tmp/s.aiff tests/fixtures/sample.wav -d LEI16@16000 -f WAVE -c 1
+```
+
+Then, in separate terminals (the Whisper Space and LiveKit server must already
+be running, and `.env` pointed at them):
+
+```bash
+# 1) the worker, registered under AGENT_NAME, idle until dispatched
+python -m src.main dev
+
+# 2) the "browser": prints captions as they arrive
+python tests/verify_captions.py --room demo --duration 60
+
+# 3) dispatch the agent into the room (what the Talksy backend does)
+python tests/dispatch_agent.py --room demo
+
+# 4) AFTER the agent has joined, a "speaker" publishes mic audio
+python tests/publish_wav.py --room demo --identity alice --wav tests/fixtures/sample.wav
+```
+
+**Ordering matters:** an agent only transcribes audio that plays *after* it
+subscribes, so dispatch (step 3) before publishing (step 4). Expected output in
+the viewer:
+
+```
+[caption] speaker=alice lang=en (FINAL) ...: Testing 123, this is a caption test.
+```
+
+The caption is attributed to `alice` (the speaker), not the agent - exactly what
+the Talksy UI renders against. Run two `publish_wav.py` instances with different
+`--identity` values to confirm independent, correctly-attributed captions.
+
 ## How it works internally
 
 1. Connect to the room audio-only (`AutoSubscribe.AUDIO_ONLY`).
