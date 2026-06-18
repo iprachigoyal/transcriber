@@ -8,8 +8,7 @@ Contract (the transcriber agent depends on this exact shape):
     GET  /health       -> 200 {"status": "ok", ...}   (keep-warm / readiness)
 
 The model is loaded ONCE at startup and kept in memory (loading per request
-would make every caption painfully slow). On a free CPU Space, "base" is a good
-speed/quality balance; set WHISPER_MODEL=tiny if latency is too high.
+would make every caption painfully slow). 
 """
 
 from __future__ import annotations
