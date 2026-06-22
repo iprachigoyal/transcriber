@@ -12,8 +12,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Default model; override with a Space variable if you want tiny/small.
-ENV WHISPER_MODEL=base
+# Default model; override with a Space variable if you want tiny/small/base.
+# base.en is the English-specific model: same speed as base on CPU, more accurate.
+ENV WHISPER_MODEL=base.en
+ENV WHISPER_LANGUAGE=en
 ENV WHISPER_DEVICE=cpu
 ENV WHISPER_COMPUTE_TYPE=int8
 

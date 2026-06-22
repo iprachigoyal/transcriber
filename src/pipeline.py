@@ -19,6 +19,7 @@ Key design choices and why:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import uuid
 
@@ -32,7 +33,16 @@ from .vad import VadSegmenter
 log = logging.getLogger("transcriber.pipeline")
 
 FRAME_MS = 20
-MAX_QUEUED_UTTERANCES = 5
+# Buffer enough short (~4s) utterances to absorb bursts and brief STT slowness
+# without dropping speech. Smaller segments clear faster, so a backlog is rare;
+# this headroom means we rarely have to discard anything.
+MAX_QUEUED_UTTERANCES = 12
+
+# Reliable data-channel topic for captions. We publish each caption here IN ADDITION to the
+# native publish_transcription, because some browser livekit-client builds don't decode the
+# transcription wire format this agent's server SDK emits and would silently show nothing.
+# The Talksy web client renders captions from this topic. Must match CAPTION_TOPIC on the client.
+CAPTION_TOPIC = "talksy-captions"
 
 
 class TranscriptionPipeline:
@@ -155,7 +165,7 @@ class TranscriptionPipeline:
             # always prefer the most recent speech.
             try:
                 queue.get_nowait()
-                log.debug("STT backlog: dropped an older utterance")
+                log.warning("STT backlog: dropped an older utterance (captions may be missing)")
             except asyncio.QueueEmpty:
                 pass
         try:
@@ -191,6 +201,7 @@ class TranscriptionPipeline:
             final=True,
             language=language or "",
         )
+        # 1) Native transcription (for LiveKit clients that decode it).
         try:
             await self._room.local_participant.publish_transcription(
                 rtc.Transcription(
@@ -199,6 +210,24 @@ class TranscriptionPipeline:
                     segments=[segment],
                 )
             )
-            log.info("caption identity=%s [%s] %s", identity, language, text)
         except Exception as exc:  # noqa: BLE001
             log.warning("publish_transcription failed: %s", exc)
+
+        # 2) Reliable data-channel caption (what the Talksy web client actually renders).
+        try:
+            await self._room.local_participant.publish_data(
+                json.dumps(
+                    {
+                        "id": segment.id,
+                        "identity": identity,
+                        "text": text,
+                        "language": language or "",
+                        "final": True,
+                    }
+                ),
+                reliable=True,
+                topic=CAPTION_TOPIC,
+            )
+            log.info("caption identity=%s [%s] %s", identity, language, text)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("publish_data caption failed: %s", exc)

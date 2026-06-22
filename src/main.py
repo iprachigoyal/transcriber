@@ -57,6 +57,7 @@ async def entrypoint(ctx: JobContext) -> None:
         base_url=cfg.hf_whisper_url,
         token=cfg.hf_token,
         timeout_s=cfg.hf_timeout_s,
+        language=cfg.stt_language,
     )
     pipeline = TranscriptionPipeline(ctx.room, stt, cfg)
     pipeline.start()

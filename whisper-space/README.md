@@ -33,13 +33,14 @@ Returns `200` with model status. Used by the agent for keep-warm pings.
 
 ## Configuration (Space variables / env)
 
-| Variable               | Default | Notes                                          |
-| ---------------------- | ------- | ---------------------------------------------- |
-| `WHISPER_MODEL`        | `base`  | `tiny` for lower latency, `small` for quality. |
-| `WHISPER_DEVICE`       | `cpu`   | Free Spaces are CPU-only.                      |
-| `WHISPER_COMPUTE_TYPE` | `int8`  | Fast + low memory on CPU.                      |
-| `WHISPER_BEAM_SIZE`    | `1`     | Greedy decode; raise for slightly better text. |
-| `SPACE_TOKEN`          | (unset) | If set, requests must carry the bearer token.  |
+| Variable               | Default   | Notes                                            |
+| ---------------------- | --------- | ------------------------------------------------ |
+| `WHISPER_MODEL`        | `base.en` | English-specific; `base` for multilingual, `small.en` for quality. |
+| `WHISPER_LANGUAGE`     | `en`      | Pinned language; empty = auto-detect (less accurate on short clips). |
+| `WHISPER_DEVICE`       | `cpu`     | Free Spaces are CPU-only.                        |
+| `WHISPER_COMPUTE_TYPE` | `int8`    | Fast + low memory on CPU.                        |
+| `WHISPER_BEAM_SIZE`    | `1`       | Greedy decode; raise for slightly better text.   |
+| `SPACE_TOKEN`          | (unset)   | If set, requests must carry the bearer token.    |
 
 ## Run locally
 

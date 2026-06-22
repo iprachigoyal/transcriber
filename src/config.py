@@ -55,6 +55,7 @@ class Config:
     agent_name: str
     hf_whisper_url: str
     hf_token: str | None
+    stt_language: str | None
     sample_rate: int
     vad_silence_ms: int
     segment_max_ms: int
@@ -82,9 +83,10 @@ class Config:
             agent_name=os.getenv("AGENT_NAME", "talksy-transcriber"),
             hf_whisper_url=_require("HF_WHISPER_URL"),
             hf_token=os.getenv("HF_TOKEN") or None,
+            stt_language=(os.getenv("STT_LANGUAGE", "en") or "").strip() or None,
             sample_rate=sample_rate,
-            vad_silence_ms=_int("VAD_SILENCE_MS", 600),
-            segment_max_ms=_int("SEGMENT_MAX_MS", 10000),
+            vad_silence_ms=_int("VAD_SILENCE_MS", 500),
+            segment_max_ms=_int("SEGMENT_MAX_MS", 4000),
             segment_min_ms=_int("SEGMENT_MIN_MS", 300),
             vad_aggressiveness=aggressiveness,
             hf_timeout_s=_float("HF_TIMEOUT_S", 15.0),
